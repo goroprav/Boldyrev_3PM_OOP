@@ -1,122 +1,138 @@
 class Array3d:
     def __init__(self, dim0, dim1, dim2):
-        self.dim0 = dim0
-        self.dim1 = dim1
-        self.dim2 = dim2
-        self.array = [[[0 for _ in range(dim2)] for _ in range(dim1)] for _ in range(dim0)]
+        self.__dim0 = dim0
+        self.__dim1 = dim1
+        self.__dim2 = dim2
+        self.__data = [None] * (dim0 * dim1 * dim2)
 
-    def __getitem__(self, idx):
-        return self.array[idx]
+    def __getitem__(self, indices):
+        i, j, k = indices
+        return self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k]
+
+    def __setitem__(self, indices, value):
+        i, j, k = indices
+        self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = value
+
+    def __get_slice(self, coord1, coord2, coord3):
+        slice = []
+        for i in range(self.__dim0):
+            for j in range(self.__dim1):
+                for k in range(self.__dim2):
+                    if coord1 is not None and i != coord1:
+                        continue
+                    if coord2 is not None and j != coord2:
+                        continue
+                    if coord3 is not None and k != coord3:
+                        continue
+                    slice.append(self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k])
+        return slice
 
     def GetValues0(self, i):
-        return self.array[i]
+        return self.__get_slice(i, None, None)
 
     def GetValues1(self, j):
-        return [[self.array[i][j] for i in range(self.dim0)] for _ in range(self.dim1)]
+        return self.__get_slice(None, j, None)
 
     def GetValues2(self, k):
-        return [[self.array[i][j][k] for j in range(self.dim1)] for i in range(self.dim0)]
+        return self.__get_slice(None, None, k)
 
     def GetValues01(self, i, j):
-        return self.array[i][j]
+        return self.__get_slice(i, j, None)
 
     def GetValues02(self, i, k):
-        return [self.array[i][j][k] for j in range(self.dim1)]
+        return self.__get_slice(i, None, k)
 
     def GetValues12(self, j, k):
-        return [self.array[i][j][k] for i in range(self.dim0)]
+        return self.__get_slice(None, j, k)
 
-    def SetValues0(self, i, values):
-        self.array[i] = values
+    def SetValues0(self, i, arr):
+        for j in range(self.__dim1):
+            for k in range(self.__dim2):
+                self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[j][k]
 
-    def SetValues1(self, j, values):
-        for i in range(self.dim0):
-            self.array[i][j] = values[i]
+    def SetValues1(self, j, arr):
+        for i in range(self.__dim0):
+            for k in range(self.__dim2):
+                self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[i][k]
 
-    def SetValues2(self, k, values):
-        for i in range(self.dim0):
-            for j in range(self.dim1):
-                self.array[i][j][k] = values[i][j]
+    def SetValues2(self, k, arr):
+        for i in range(self.__dim0):
+            for j in range(self.__dim1):
+                self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[i][j]
 
-    def SetValues01(self, i, j, values):
-        self.array[i][j] = values
+    def SetValues01(self, i, j, arr):
+        for k in range(self.__dim2):
+            self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[k]
 
-    def SetValues02(self, i, k, values):
-        for j in range(self.dim1):
-            self.array[i][j][k] = values[j]
+    def SetValues02(self, i, k, arr):
+        for j in range(self.__dim1):
+            self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[j]
 
-    def SetValues12(self, j, k, values):
-        for i in range(self.dim0):
-            self.array[i][j][k] = values[i]
-
-    @classmethod
-    def ones(cls, dim0, dim1, dim2):
-        instance = cls(dim0, dim1, dim2)
-        instance.array = [[[1 for _ in range(dim2)] for _ in range(dim1)] for _ in range(dim0)]
-        return instance
-
-    @classmethod
-    def zeros(cls, dim0, dim1, dim2):
-        instance = cls(dim0, dim1, dim2)
-        instance.array = [[[0 for _ in range(dim2)] for _ in range(dim1)] for _ in range(dim0)]
-        return instance
-
-    @classmethod
-    def fill(cls, dim0, dim1, dim2, value):
-        instance = cls(dim0, dim1, dim2)
-        instance.array = [[[value for _ in range(dim2)] for _ in range(dim1)] for _ in range(dim0)]
-        return instance
+    def SetValues12(self, j, k, arr):
+        for i in range(self.__dim0):
+            self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = arr[i]
 
 
-arr = Array3d(3, 3, 3)
+def ones(dim0, dim1, dim2):
+    arr = Array3d(dim0, dim1, dim2)
+    for i in range(dim0):
+        for j in range(dim1):
+            for k in range(dim2):
+                arr[i, j, k] = 1
+    return arr
 
-# Заполняем массив значениями
-for i in range(arr.dim0):
-    for j in range(arr.dim1):
-        for k in range(arr.dim2):
-            arr[i][j][k] = i * j * k
 
-# Выводим массив
-for i in range(arr.dim0):
-    for j in range(arr.dim1):
-        for k in range(arr.dim2):
-            print(arr[i][j][k], end=" ")
-        print()
-    print()
+def zeros(dim0, dim1, dim2):
+    arr = Array3d(dim0, dim1, dim2)
+    for i in range(dim0):
+        for j in range(dim1):
+            for k in range(dim2):
+                arr[i, j, k] = 0
+    return arr
 
-# Получаем и выводим срезы массива
+
+def fill(dim0, dim1, dim2, value):
+    arr = Array3d(dim0, dim1, dim2)
+    for i in range(dim0):
+        for j in range(dim1):
+            for k in range(dim2):
+                arr[i, j, k] = value
+    return arr
+
+# Создание массива с единичными элементами
+arr_ones = ones(3, 3, 3)
+print(arr_ones.GetValues0(0))  # Возвращает срез массива по первой координате (i, .., ..)
+print(arr_ones.GetValues1(1))  # Возвращает срез массива по второй координате (.., j, ..)
+print(arr_ones.GetValues2(2))  # Возвращает срез массива по третьей координате (.., .., k)
+print(arr_ones.GetValues01(0, 1))  # Возвращает срез массива по первой и второй координатам (i, j, ..)
+print(arr_ones.GetValues02(0, 2))  # Возвращает срез массива по первой и третьей координатам (i, .., k)
+print(arr_ones.GetValues12(1, 2))  # Возвращает срез массива по второй и третьей координатам (.., j, k)
+
+# Создание массива с нулевыми элементами
+arr_zeros = zeros(2, 2, 2)
+print(arr_zeros.GetValues0(1))
+print(arr_zeros.GetValues1(0))
+print(arr_zeros.GetValues2(1))
+print(arr_zeros.GetValues01(1, 0))
+print(arr_zeros.GetValues02(1, 1))
+print(arr_zeros.GetValues12(0, 1))
+
+# Создание массива с заданным значением
+arr_fill = fill(2, 3, 4, 5)
+print(arr_fill.GetValues0(1))
+print(arr_fill.GetValues1(2))
+print(arr_fill.GetValues2(3))
+print(arr_fill.GetValues01(1, 2))
+print(arr_fill.GetValues02(1, 3))
+print(arr_fill.GetValues12(2, 3))
+
+arr = Array3d(3, 4, 5)
+
+values = [[1, 2, 3, 4, 5],
+          [6, 7, 8, 9, 10],
+          [11, 12, 13, 14, 15],
+          [16, 17, 18, 19, 20]]
+
+arr.SetValues0(1, values)
+
 print(arr.GetValues0(1))
-print(arr.GetValues1(1))
-print(arr.GetValues2(1))
-
-# Устанавливаем значения для срезов
-arr.SetValues0(1, [[1 for _ in range(arr.dim2)] for _ in range(arr.dim1)])
-print(arr.GetValues0(1))
-
-# Создаем новые экземпляры класса с массивами, заполненными единицами, нулями и произвольным значением
-arr_ones = Array3d.ones(3, 3, 3)
-arr_zeros = Array3d.zeros(3, 3, 3)
-arr_fill = Array3d.fill(3, 3, 3, 7)
-
-# Выводим эти массивы
-for i in range(arr_ones.dim0):
-    for j in range(arr_ones.dim1):
-        for k in range(arr_ones.dim2):
-            print(arr_ones[i][j][k], end=" ")
-        print()
-    print()
-
-for i in range(arr_zeros.dim0):
-    for j in range(arr_zeros.dim1):
-        for k in range(arr_zeros.dim2):
-            print(arr_zeros[i][j][k], end=" ")
-        print()
-    print()
-
-for i in range(arr_fill.dim0):
-    for j in range(arr_fill.dim1):
-        for k in range(arr_fill.dim2):
-            print(arr_fill[i][j][k], end=" ")
-        print()
-    print()
-
