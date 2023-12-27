@@ -1,4 +1,34 @@
-import pickle
+from abc import ABC, abstractmethod
+import ast
+class IUserManager(ABC):
+    @abstractmethod
+    def SignIn(self, user):
+        pass
+
+    @abstractmethod
+    def SignOut(self, user):
+        pass
+
+    @abstractmethod
+    def isAuthorized(self):
+        pass
+
+class IRepository(ABC):
+    @abstractmethod
+    def GetAll(self):
+        pass
+
+    @abstractmethod
+    def Add(self, item):
+        pass
+
+    @abstractmethod
+    def Remove(self, item):
+        pass
+
+    @abstractmethod
+    def Update(self, item):
+        pass
 
 class User:
     def __init__(self, id, login, password, name):
@@ -7,124 +37,137 @@ class User:
         self.password = password
         self.name = name
 
-class IUserRepository:
-    def get_all(self):
+class IUserRepository(IRepository):
+    @abstractmethod
+    def GetById(self, id):
         pass
 
-    def add(self, user):
+    @abstractmethod
+    def GetByLogin(self, login):
         pass
-
-    def remove(self, user):
-        pass
-
-    def update(self, user):
-        pass
-
-class UserRepository(IUserRepository):
+    
+class FileUserRepository(IUserRepository):
+    
     def __init__(self, file_name):
         self.file_name = file_name
-        self.users = self.get_all()
 
-    def get_all(self):
+    def GetAll(self):
         try:
-            with open(self.file_name, 'rb') as file:
-                return pickle.load(file)
+            with open(self.file_name, 'r') as file:
+                users = file.readlines()
+            users = [ast.literal_eval(user) for user in users]  # Безопасное преобразование каждой строки в словарь
         except FileNotFoundError:
-            return []
+            users = []
+        return users
 
-    def add(self, user):
-        if not self.users:
-            user.id = 1
-        else:
-            user.id = max(u.id for u in self.users) + 1
-        self.users.append(user)
-        with open(self.file_name, 'wb') as file:
-            pickle.dump(self.users, file)
+    def Add(self, user):
+        with open(self.file_name, 'a') as file:  # Открываем файл в режиме добавления
+            file.write(str(user.__dict__) + '\n')  # Записываем словарь пользователя в новую строку
 
-    def remove(self, user):
-        self.users = [u for u in self.users if u.id != user.id]
-        with open(self.file_name, 'wb') as file:
-            pickle.dump(self.users, file)
+    def Remove(self, user):
+        users = self.GetAll()
+        users = [u for u in users if u['id'] != user.id]
+        with open(self.file_name, 'w') as file:  # Открываем файл в режиме записи для перезаписи существующих данных
+            for user in users:
+                file.write(str(user) + '\n')  # Записываем словарь каждого пользователя в новую строку
 
-    def update(self, user):
-        for i, u in enumerate(self.users):
-            if u.id == user.id:
-                self.users[i] = user
+    def Update(self, user):
+        users = self.GetAll()
+        for i, u in enumerate(users):
+            if u['id'] == user.id:
+                users[i] = user.__dict__  # Обновляем словарь пользователя
                 break
-        with open(self.file_name, 'wb') as file:
-            pickle.dump(self.users, file)
+        with open(self.file_name, 'w') as file:  # Открываем файл в режиме записи для перезаписи существующих данных
+            for user in users:
+                file.write(str(user) + '\n')  # Записываем словарь каждого пользователя в новую 
 
-class IUserManager:
-    def sign_in(self, user):
-        pass
+    def GetById(self, id):
+        users = self.GetAll()
+        for user in users:
+            if user['id'] == id:
+                return User(**user)
 
-    def sign_out(self, user):
-        pass
-
-    def is_authorized(self):
-        pass
-
-class UserManager(IUserManager):
+    def GetByLogin(self, login):
+        if login == "last_user":
+            users = self.GetAll()
+            if users:
+                last_user = users[-1]  #получение данных последненго вошедшего пользователя
+                return User(**last_user)
+            else:
+                return None  
+        else:
+            users = self.GetAll()
+            for user in users:
+                if user['login'] == login:
+                    return User(**user)
+            
+class AuthManager(IUserManager):
     def __init__(self, user_repository):
         self.user_repository = user_repository
         self.current_user = None
 
-    def sign_in(self, user):
+    def SignIn(self, user):
         self.current_user = user
 
-    def sign_out(self, user):
+    def SignOut(self, user):
         self.current_user = None
 
-    def is_authorized(self):
+    def isAuthorized(self):
         return self.current_user is not None
+def main_menu():
+    print("1. Регистрация нового пользователя")
+    print("2. Авторизация")
+    print("3. Автоавторизация последнего вошедшего пользователя")
+    print("4. Сменить пользователя")
+    print("5. Выход")
 
-def main():
-    user_repository = UserRepository('users.dat')
-    user_manager = UserManager(user_repository)
+user_repository = FileUserRepository("users.json")
+auth_manager = AuthManager(user_repository)
 
-    while True:
-        print("1. Регистрация нового пользователя")
-        print("2. Вход в аккаунт")
-        print("3. Выход из аккаунта")
-        print("4. Проверить, вошел ли пользователь в аккаунт")
-        print("5. Выйти из приложения")
-        choice = input("Выберите действие: ")
-
-        if choice == "1":
-            login = input("Введите логин: ")
-            password = input("Введите пароль: ")
-            name = input("Введите имя: ")
-            new_user = User(0, login, password, name)  # id будет назначен автоматически
-            user_repository.add(new_user)
-            print("Пользователь зарегистрирован успешно. Ему назначен id:", new_user.id)
-
-        elif choice == "2":
-            last_user = user_repository.get_all()[-1]  # Получаем последнего вошедшего пользователя
-            if last_user and user_manager.is_authorized():
-                user_manager.sign_in(last_user)  # Автоавторизация последнего вошедшего пользователя
-                print("Вы успешно вошли в аккаунт как", last_user.name)
-            else:
-                login = input("Введите логин: ")
-                password = input("Введите пароль: ")
-                user = next((u for u in user_repository.get_all() if u.login == login and u.password == password), None)
-                if user:
-                    user_manager.sign_in(user)
-                    print("Вы успешно вошли в аккаунт.")
-                else:
-                    print("Неверный логин или пароль.")
-
-        elif choice == "3":
-            user_manager.sign_out(user_manager.current_user)
-            print("Вы успешно вышли из аккаунта.")
-
-        elif choice == "4":
-            if user_manager.is_authorized():
-                print("Пользователь вошел в аккаунт.")
-            else:
-                print("Пользователь не вошел в аккаунт.")
-
-        elif choice == "5":
-            break
-
-if __name__ == "__main__":
-    main()
+while True:
+    main_menu()
+    choice = input("Выберите действие: ")
+    
+    if choice == "1":
+        # Логика для регистрации нового пользователя
+        id = len(user_repository.GetAll()) + 1  # Автоматическое назначение ID
+        login = input("Введите логин: ")
+        password = input("Введите пароль: ")
+        name = input("Введите имя: ")
+        new_user = User(id, login, password, name)
+        user_repository.Add(new_user)
+    elif choice == "2":
+        # Логика для авторизации
+        login = input("Введите логин: ")
+        password = input("Введите пароль: ")
+        user = user_repository.GetByLogin(login)
+        if user and user.password == password:
+            auth_manager.SignIn(user)
+            print("Вы успешно авторизовались.")
+        else:
+            print("Неверный логин или пароль.")
+    elif choice == "3":
+        # Логика для автоавторизации последнего вошедшего пользователя
+        last_user = user_repository.GetByLogin("last_user")  
+        if last_user:
+            auth_manager.SignIn(last_user)
+            print(f"Вы автоматически авторизовались за последнего пользователя {last_user.name}.")
+        else:
+            print("Никто не авторизован.")
+    elif choice == "4":
+        # Логика для смены пользователя
+        if auth_manager.isAuthorized():
+            print(f"Текущий пользователь {auth_manager.current_user.name} вышел из системы.")
+            auth_manager.SignOut(auth_manager.current_user)
+        login = input("Введите логин нового пользователя: ")
+        password = input("Введите пароль нового пользователя: ")
+        user = user_repository.GetByLogin(login)
+        if user and user.password == password:
+            auth_manager.SignIn(user)
+            print("Вы успешно авторизовались.")
+        else:
+            print("Неверный логин или пароль.")
+    elif choice == "5":
+        break
+    else:
+        print("Некорректный выбор. Пожалуйста, выберите существующий вариант.")
