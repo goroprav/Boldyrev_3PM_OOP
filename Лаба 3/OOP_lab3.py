@@ -13,7 +13,7 @@ class Array3d:
         i, j, k = indices
         self.__data[i * self.__dim1 * self.__dim2 + j * self.__dim2 + k] = value
 
-    def __get_slice(self, coord1, coord2, coord3):
+    def __get_slice__(self, coord1, coord2, coord3):
         slice = []
         for i in range(self.__dim0):
             for j in range(self.__dim1):
@@ -28,22 +28,22 @@ class Array3d:
         return slice
 
     def GetValues0(self, i):
-        return self.__get_slice(i, None, None)
+        return self.__get_slice__(i, None, None)
 
     def GetValues1(self, j):
-        return self.__get_slice(None, j, None)
+        return self.__get_slice__(None, j, None)
 
     def GetValues2(self, k):
-        return self.__get_slice(None, None, k)
+        return self.__get_slice__(None, None, k)
 
     def GetValues01(self, i, j):
-        return self.__get_slice(i, j, None)
+        return self.__get_slice__(i, j, None)
 
     def GetValues02(self, i, k):
-        return self.__get_slice(i, None, k)
+        return self.__get_slice__(i, None, k)
 
     def GetValues12(self, j, k):
-        return self.__get_slice(None, j, k)
+        return self.__get_slice__(None, j, k)
 
     def SetValues0(self, i, arr):
         for j in range(self.__dim1):
